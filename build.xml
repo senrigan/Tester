@@ -1,0 +1,104 @@
+<project name="tester" basedir="." default="release">
+	<property name="classes.path" value="bin"/>
+	<property name="source.path" value="src"/>
+	<property name="dist.path" value="dist" />
+	<property name="release.path" value="release"/>
+	<property name="lib.path" value="lib"/>
+
+	<path id="classpath">
+		<fileset dir="${lib.path}">
+			<include name="*.jar" />
+		</fileset>
+	</path>
+	
+	<target name="clean">
+		<delete dir="${classes.path}" />
+		<delete dir="${release.path}" />
+		<delete dir="${dist.path}" />
+		<mkdir dir="${dist.path}" />
+		<mkdir dir="${classes.path}" />
+		<mkdir dir="${release.path}" />
+	</target>
+
+	<target name="compile" depends="clean">
+		<javac srcdir="${source.path}" destdir="${classes.path}" classpathref="classpath" includeantruntime="false" debug="true" >
+		</javac>
+	</target>
+
+	<path id="server-classpath-old">
+		<pathelement location="${lib.path}/commons-codec-1.5.jar" />
+		<pathelement location="${lib.path}/slf4j-api-1.5.6.jar" />
+		<pathelement location="${lib.path}/slf4j-jdk14-1.5.6.jar" />
+		<pathelement location="${lib.path}/snmp4j.jar" />
+		<pathelement location="${lib.path}/xstream-1.4.7.jar" />
+	</path>
+
+	<path id="server-classpath-new" >
+		<pathelement location="${lib.path}/jade-4.3.3.jar" />
+		<pathelement location="${lib.path}/javaee.jar" />
+		<pathelement location="${lib.path}/common.jar" />
+		<pathelement location="${lib.path}/model.jar" />
+		<pathelement location="${lib.path}/server.jar" />
+	</path>
+
+	<pathconvert property="classpath-old" pathsep=" ">
+	  <path refid="server-classpath-old"/>
+	  <mapper>
+	    <chainedmapper>
+	       <flattenmapper/>
+	       <globmapper from="*.jar" to="*.jar"/>
+	    </chainedmapper>
+	  </mapper>
+	</pathconvert>
+
+	<pathconvert property="classpath-new" pathsep=" ">
+	  <path refid="server-classpath-new"/>
+	  <mapper>
+	    <chainedmapper>
+	       <flattenmapper/>
+	       <globmapper from="*.jar" to="libraries/*.jar"/>
+	    </chainedmapper>
+	  </mapper>
+	</pathconvert>
+
+	<target name="dist-server">
+		<jar destfile="${dist.path}/tester-server.jar">
+			<fileset dir="${classes.path}">
+				<exclude name="**/client/"/>
+			</fileset>
+			<manifest>
+				<attribute name="Main-Class" value="com.gdc.nms.tester.server.Main" />
+				<attribute name="Class-Path" value="${classpath-new} ${classpath-old}" />
+			</manifest>
+		</jar>
+	</target>
+
+	<target name="dist-client">
+		<jar destfile="${dist.path}/tester-client.jar">
+			<fileset dir="${classes.path}">
+				<exclude name="**/server/"/>
+			</fileset>
+		</jar>
+	</target>
+
+	<target name="dist" depends="compile, dist-client, dist-server">
+	</target>
+	
+	<target name="release-server">
+		<mkdir dir="${release.path}/server" />
+		<mkdir dir="${release.path}/server/libraries" />
+		<copy todir="${release.path}/server/libraries" flatten="true">
+			<path refid="server-classpath-new"/>
+		</copy>
+<!--		<copy todir="${release.path}/server/" flatten="true">
+			<path refid="server-classpath-old"/>
+		</copy> -->
+		<copy todir="${release.path}/server/" file="${dist.path}/tester-server.jar"></copy>
+	</target>
+
+	<target name="release-client">
+		<copy todir="${release.path}" file="${dist.path}/tester-client.jar"></copy>
+	</target>
+
+	<target name="release" depends="dist, release-server, release-client"/>
+</project>
